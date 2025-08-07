@@ -106,9 +106,11 @@ const StaffDashboard = () => {
   };
 
   // Transform API order to component order format
+  // تحديث transformApiOrder function للتعامل مع order_ID
   const transformApiOrder = (apiOrder: any): Order => {
     return {
-      id: apiOrder.orderId || apiOrder.order_id || `ORD-${apiOrder.row_number}`,
+      // تأكد من استخدام order_ID أولاً، ثم orderId كبديل
+      id: apiOrder.order_ID || apiOrder.orderId || apiOrder.order_id,
       customerName:
         apiOrder.customerName || apiOrder.Customer_Name || "Unknown Customer",
       orderType: apiOrder.orderType || apiOrder.order_type || "dine-in",
@@ -128,7 +130,6 @@ const StaffDashboard = () => {
       rowNumber: apiOrder.row_number || 0,
     };
   };
-
   // Sort orders function
   const sortOrders = (orders: Order[], sortOption: SortOption): Order[] => {
     const sortedOrders = [...orders];

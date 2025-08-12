@@ -684,7 +684,11 @@ const StaffDashboard = () => {
                               )}
                               {order.address && (
                                 <span className="bg-slate-100 px-2 py-1 rounded">
-                                  📍 {order.address.substring(0, 30)}...
+                                  📍{" "}
+                                  {(order.address || "")
+                                    .toString()
+                                    .substring(0, 30)}
+                                  ...
                                 </span>
                               )}
                             </div>

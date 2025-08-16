@@ -72,66 +72,50 @@ const StaffDashboard = () => {
 
   // Enhanced function to safely parse items
   const parseOrderItems = (itemsString: string): string[] => {
-    if (!itemsString || itemsString.trim() === "") {
-      return [];
+    if (!itemsString?.trim()) return [];
+
+    // ✅ استبدال "\n" اللي جاي من الـ API بسطر جديد فعلي
+    const cleaned = itemsString.trim().replace(/\\n/g, "\n");
+
+    // 1. If input looks like an array: [item1, item2]
+    if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
+      const content = cleaned.slice(1, -1).trim();
+      if (!content || content === "-") return [];
+      return content
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item && item !== "-");
     }
 
+    // 2. Try JSON.parse
     try {
-      // Handle different formats that might come from the API
-      const trimmed = itemsString.trim();
-
-      // If it's already an array format like "[-]" or "[item1, item2]"
-      if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-        // Remove brackets and split by comma
-        const content = trimmed.slice(1, -1);
-        if (content === "-" || content === "") {
-          return [];
-        }
-        return content
-          .split(",")
-          .map((item) => item.trim())
-          .filter((item) => item !== "" && item !== "-");
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) {
+        return parsed.filter((item) => item && item !== "-");
       }
-
-      // Try to parse as JSON first
-      try {
-        const parsed = JSON.parse(itemsString);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item) => item && item !== "-");
-        }
-        // If it's a single item, wrap in array
-        return [parsed.toString()];
-      } catch (jsonError) {
-        // JSON parsing failed, continue with other methods
-      }
-
-      // Handle newline-separated items (common format from your data)
-      if (itemsString.includes("\n")) {
-        return itemsString
-          .split("\n")
-          .map((item) => item.trim())
-          .filter((item) => item !== "" && item !== "-");
-      }
-
-      // Handle comma-separated items
-      if (itemsString.includes(",")) {
-        return itemsString
-          .split(",")
-          .map((item) => item.trim())
-          .filter((item) => item !== "" && item !== "-");
-      }
-
-      // Single item case
-      return itemsString === "-" ? [] : [itemsString];
-    } catch (error) {
-      console.warn(
-        "Failed to parse items, treating as single item:",
-        itemsString
-      );
-
-      // Fallback: treat as single item
-      return itemsString === "-" ? [] : [itemsString];
+      return parsed && parsed !== "-" ? [parsed.toString()] : [];
+    } catch {
+      // ignore JSON error and fallback
     }
+
+    // 3. Handle newline-separated items
+    if (cleaned.includes("\n")) {
+      return cleaned
+        .split("\n")
+        .map((item) => item.trim())
+        .filter((item) => item && item !== "-");
+    }
+
+    // 4. Handle comma-separated items
+    if (cleaned.includes(",")) {
+      return cleaned
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item && item !== "-");
+    }
+
+    // 5. Fallback: single item
+    return cleaned === "-" ? [] : [cleaned];
   };
 
   // Transform API order to component order format

@@ -5,6 +5,7 @@ import { Button } from "../Components/UI/Button";
 import { axiosInstance } from "../config/axios.config";
 import Pusher from "pusher-js";
 import Pagination from "../Components/Pagination";
+import Loading from "../Components/Loading";
 
 // =================== Pusher Configuration ===================
 const PUSHER_KEY = "4b8ce5bea9c546484b04";
@@ -396,16 +397,7 @@ const StaffDashboard = () => {
     canceled: orders.filter((o) => o.status === "canceled").length,
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Loading type="full" />;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50">

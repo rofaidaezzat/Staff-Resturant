@@ -67,7 +67,7 @@ const StaffDashboard = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pusherConnected, setPusherConnected] = useState<boolean>(false);
-  const [isUpdating, setIsUpdating] = useState<boolean>(false);
+  const [isUpdating, setIsUpdating] = useState<Record<string, boolean>>({});
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [ordersPerPage] = useState<number>(10); // Number of orders per page
@@ -274,7 +274,7 @@ const StaffDashboard = () => {
     newStatus: ComponentStatus
   ): Promise<void> => {
     try {
-      setIsUpdating((prev) => ({ ...prev, [orderId]: true })); // Update specific order's loading state
+      setIsUpdating((prev) => ({ ...prev, [orderId]: true }));
       await axiosInstance.post("webhook/update-order", {
         orderId: orderId,
         status: mapComponentStatusToApiStatus(newStatus),
@@ -297,7 +297,7 @@ const StaffDashboard = () => {
       console.error("Error updating order status:", err);
       setError("Failed to update order status. Please try again.");
     } finally {
-      setIsUpdating((prev) => ({ ...prev, [orderId]: false })); // Reset specific order's loading state
+      setIsUpdating((prev) => ({ ...prev, [orderId]: false }));
     }
   };
 

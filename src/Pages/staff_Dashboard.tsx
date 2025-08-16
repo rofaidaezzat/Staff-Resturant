@@ -74,66 +74,112 @@ const StaffDashboard = () => {
 
   // Enhanced function to safely parse items
   const parseOrderItems = (itemsString: string): string[] => {
-    if (!itemsString?.trim()) return [];
+    console.log("🔍 Parsing items:", itemsString);
+    
+    if (!itemsString?.trim()) {
+      console.log("🔍 Items string is empty or null");
+      return [];
+    }
 
     // ✅ استبدال "\n" اللي جاي من الـ API بسطر جديد فعلي
     const cleaned = itemsString.trim().replace(/\\n/g, "\n");
+    console.log("🔍 Cleaned items string:", cleaned);
 
     // 1. If input looks like an array: [item1, item2]
     if (cleaned.startsWith("[") && cleaned.endsWith("]")) {
       const content = cleaned.slice(1, -1).trim();
       if (!content || content === "-") return [];
-      return content
+      const result = content
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item && item !== "-");
+      console.log("🔍 Parsed as array:", result);
+      return result;
     }
 
     // 2. Try JSON.parse
     try {
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed)) {
-        return parsed.filter((item) => item && item !== "-");
+        const result = parsed.filter((item) => item && item !== "-");
+        console.log("🔍 Parsed as JSON array:", result);
+        return result;
       }
-      return parsed && parsed !== "-" ? [parsed.toString()] : [];
+      const result = parsed && parsed !== "-" ? [parsed.toString()] : [];
+      console.log("🔍 Parsed as JSON single:", result);
+      return result;
     } catch {
+      console.log("🔍 JSON parse failed, trying other methods");
       // ignore JSON error and fallback
     }
 
     // 3. Handle newline-separated items
     if (cleaned.includes("\n")) {
-      return cleaned
+      const result = cleaned
         .split("\n")
         .map((item) => item.trim())
         .filter((item) => item && item !== "-");
+      console.log("🔍 Parsed as newline-separated:", result);
+      return result;
     }
 
     // 4. Handle comma-separated items
     if (cleaned.includes(",")) {
-      return cleaned
+      const result = cleaned
         .split(",")
         .map((item) => item.trim())
         .filter((item) => item && item !== "-");
+      console.log("🔍 Parsed as comma-separated:", result);
+      return result;
     }
 
     // 5. Fallback: single item
-    return cleaned === "-" ? [] : [cleaned];
+    const result = cleaned === "-" ? [] : [cleaned];
+    console.log("🔍 Parsed as single item:", result);
+    return result;
   };
 
   // Transform API order to component order format
   const transformApiOrder = (apiOrder: any): Order => {
-    return {
+    console.log("🔍 Transforming API order:", apiOrder);
+    
+    const transformedOrder = {
       // تأكد من استخدام order_ID أولاً، ثم orderId كبديل
-      id: apiOrder.order_ID || apiOrder.orderId || apiOrder.order_id,
+      id: apiOrder.order_ID || apiOrder.orderId || apiOrder.order_id || apiOrder.id,
       customerName:
         apiOrder.customerName || apiOrder.Customer_Name || "Unknown Customer",
-      orderType: apiOrder.orderType || apiOrder.order_type || "dine-in",
+      orderType: apiOrder.orderType || apiOrder.order_Type || apiOrder.order_type || "dine-in",
       items: parseOrderItems(apiOrder.items || "[]"),
-      status: mapApiStatusToComponentStatus(apiOrder.status || "processing"),
-      timestamp:
-        apiOrder.createdAt || apiOrder.created_at || new Date().toISOString(),
+      status: mapApiStatusToComponentStatus(apiOrder.status || "Received"),
+      timestamp: (() => {
+        const dateString = apiOrder.createdAt || apiOrder.created_at;
+        if (dateString) {
+          // Parse Arabic date format: "17-08-2025 01:19 AM"
+          try {
+            // Extract date parts
+            const match = dateString.match(/(\d+)-(\d+)-(\d+)\s+(\d+):(\d+)\s+(AM|PM)/);
+            if (match) {
+              const [, day, month, year, hour, minute, period] = match;
+              let hour24 = parseInt(hour);
+              
+              // Convert to 24-hour format
+              if (period === 'PM' && hour24 !== 12) hour24 += 12;
+              if (period === 'AM' && hour24 === 12) hour24 = 0;
+              
+              // Create Date object (month is 0-indexed)
+              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hour24, parseInt(minute));
+              console.log("🔍 Parsed date:", dateString, "->", date.toISOString());
+              return date.toISOString();
+            }
+          } catch (err) {
+            console.error("🔍 Error parsing date:", dateString, err);
+          }
+        }
+        // Fallback to current time
+        return new Date().toISOString();
+      })(),
       total: parseFloat(apiOrder.totalPrice || apiOrder.total_price || "0"),
-      phone: apiOrder.phone || "",
+      phone: apiOrder.phone ? apiOrder.phone.toString() : "",
       address: apiOrder.address || "",
       tableNumber: apiOrder.tableNumber || apiOrder.table_number || "",
       updatedAt:
@@ -143,24 +189,41 @@ const StaffDashboard = () => {
         apiOrder.created_at,
       rowNumber: apiOrder.row_number || 0,
     };
+    
+    console.log("✅ Transformed order:", transformedOrder);
+    return transformedOrder;
   };
 
   // Sort orders function
   const sortOrders = (orders: Order[], sortOption: SortOption): Order[] => {
+    console.log("🔄 Sorting orders by:", sortOption);
+    console.log("🔄 Orders before sorting:", orders.map(o => ({ id: o.id, timestamp: o.timestamp, status: o.status })));
+    
     const sortedOrders = [...orders];
 
     switch (sortOption) {
       case "newest": {
-        return sortedOrders.sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        const result = sortedOrders.sort(
+          (a, b) => {
+            const timeA = new Date(a.timestamp).getTime();
+            const timeB = new Date(b.timestamp).getTime();
+            console.log(`🔄 Comparing: ${a.id} (${a.timestamp} -> ${timeA}) vs ${b.id} (${b.timestamp} -> ${timeB})`);
+            return timeB - timeA;
+          }
         );
+        console.log("🔄 Orders after newest sorting:", result.map(o => ({ id: o.id, timestamp: o.timestamp })));
+        return result;
       }
       case "oldest": {
-        return sortedOrders.sort(
-          (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        const result = sortedOrders.sort(
+          (a, b) => {
+            const timeA = new Date(a.timestamp).getTime();
+            const timeB = new Date(b.timestamp).getTime();
+            return timeA - timeB;
+          }
         );
+        console.log("🔄 Orders after oldest sorting:", result.map(o => ({ id: o.id, timestamp: o.timestamp })));
+        return result;
       }
       case "status": {
         const statusOrder = {
@@ -170,12 +233,16 @@ const StaffDashboard = () => {
           completed: 4,
           canceled: 5, // Add canceled to the end
         };
-        return sortedOrders.sort(
+        const result = sortedOrders.sort(
           (a, b) => statusOrder[a.status] - statusOrder[b.status]
         );
+        console.log("🔄 Orders after status sorting:", result.map(o => ({ id: o.id, status: o.status })));
+        return result;
       }
       case "total": {
-        return sortedOrders.sort((a, b) => b.total - a.total);
+        const result = sortedOrders.sort((a, b) => b.total - a.total);
+        console.log("🔄 Orders after total sorting:", result.map(o => ({ id: o.id, total: o.total })));
+        return result;
       }
       default: {
         return sortedOrders;
@@ -209,21 +276,55 @@ const StaffDashboard = () => {
   // Fetch orders from API
   const fetchOrders = async (): Promise<void> => {
     try {
+      console.log("Fetching orders from API...");
       const response = await axiosInstance.get<ApiOrder[]>(
         "webhook/get-orders"
       );
-      console.log("Response Text >>>", response.data);
+      console.log("API Response:", response.data);
+      console.log("Response status:", response.status);
+
+      // Check if response data is valid
+      if (!response.data || !Array.isArray(response.data)) {
+        console.error("❌ Invalid response data:", response.data);
+        console.error("❌ Response data type:", typeof response.data);
+        setError("Invalid response from server. Please try again.");
+        return;
+      }
+      
+      console.log("📊 Raw API response data:", response.data);
+      console.log("📊 Response data length:", response.data.length);
 
       // Transform API data to match component structure
       const transformedOrders: Order[] = response.data.map(transformApiOrder);
+      console.log("🔄 Transformed orders:", transformedOrders);
+      console.log("🔄 Number of transformed orders:", transformedOrders.length);
 
       // Sort orders by default (newest first)
       const sortedOrders = sortOrders(transformedOrders, sortBy);
+      console.log("📊 Sorted orders:", sortedOrders);
+      console.log("📊 Number of sorted orders:", sortedOrders.length);
+      
+      // Check for any orders with undefined or null IDs
+      const invalidOrders = sortedOrders.filter(order => !order.id);
+      if (invalidOrders.length > 0) {
+        console.error("❌ Found orders with invalid IDs:", invalidOrders);
+      }
+      
       setOrders(sortedOrders);
       setError(null);
+      
+      console.log(`✅ Successfully loaded ${sortedOrders.length} orders`);
+      console.log("📝 Current orders state:", sortedOrders);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("Failed to fetch orders. Please try again.");
+      
+      // Keep existing orders if available
+      if (orders.length > 0) {
+        console.log("Keeping existing orders due to fetch error");
+        // Don't clear existing orders on error
+        return;
+      }
     } finally {
       setLoading(false);
     }
@@ -245,6 +346,7 @@ const StaffDashboard = () => {
       processing: "waiting",
       "in-progress": "in-progress",
       preparing: "in-progress",
+      received: "waiting", // Map "Received" from API to "waiting"
       ready: "ready",
       completed: "completed",
       delivered: "completed",
@@ -275,27 +377,38 @@ const StaffDashboard = () => {
   ): Promise<void> => {
     try {
       setIsUpdating((prev) => ({ ...prev, [orderId]: true }));
-      await axiosInstance.post("webhook/update-order", {
+      
+      // Send update request to API
+      const response = await axiosInstance.post("webhook/update-order", {
         orderId: orderId,
         status: mapComponentStatusToApiStatus(newStatus),
         updatedAt: new Date().toISOString(),
       });
 
-      const updatedOrders = orders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              status: newStatus,
-              updatedAt: new Date().toISOString(),
-            }
-          : order
-      );
+      console.log("Order status update response:", response.data);
 
-      const sortedOrders = sortOrders(updatedOrders, sortBy);
-      setOrders(sortedOrders);
+      // Check if update was successful
+      if (response.status === 200 || response.status === 201) {
+        console.log(`✅ Order ${orderId} status updated to ${newStatus} successfully`);
+        console.log("🔄 Refreshing orders from API...");
+        
+        // Refresh orders from API to ensure consistency
+        await fetchOrders();
+        
+        console.log("✅ Orders refreshed successfully after status update");
+      } else {
+        throw new Error(`API returned status ${response.status}`);
+      }
     } catch (err) {
       console.error("Error updating order status:", err);
       setError("Failed to update order status. Please try again.");
+      
+      // Optionally refresh orders to ensure UI is in sync with database
+      try {
+        await fetchOrders();
+      } catch (refreshErr) {
+        console.error("Error refreshing orders after failed update:", refreshErr);
+      }
     } finally {
       setIsUpdating((prev) => ({ ...prev, [orderId]: false }));
     }
@@ -324,36 +437,55 @@ const StaffDashboard = () => {
 
     // Bind to new order event
     channel.bind(EVENT_NAME, (newOrderData: any) => {
-      console.log("React: A new order has arrived!", newOrderData);
+      console.log("🚨 React: A new order has arrived!", newOrderData);
+      console.log("🚨 New order data type:", typeof newOrderData);
+      console.log("🚨 New order data keys:", Object.keys(newOrderData || {}));
 
       // Transform the new order data
       const newOrder = transformApiOrder(newOrderData);
+      console.log("🚨 Transformed new order:", newOrder);
 
       // Update orders state by adding the new order at the beginning
       setOrders((prevOrders) => {
+        console.log("🚨 Previous orders count:", prevOrders.length);
         const updatedOrders = [newOrder, ...prevOrders];
+        console.log("🚨 Updated orders count:", updatedOrders.length);
+        
         // Apply current sorting
-        return sortOrders(updatedOrders, sortBy);
+        const sortedOrders = sortOrders(updatedOrders, sortBy);
+        console.log("🚨 Sorted orders count:", sortedOrders.length);
+        return sortedOrders;
       });
 
       // Optional: Show a notification or play a sound
       console.log(
-        `New order from ${newOrder.customerName} - Total: $${newOrder.total}`
+        `🚨 New order from ${newOrder.customerName} - Total: $${newOrder.total}`
       );
     });
 
     // Bind to order update event (optional)
     channel.bind(UPDATE_EVENT_NAME, (updatedOrderData: any) => {
-      console.log("React: Order updated!", updatedOrderData);
+      console.log("🔄 React: Order updated!", updatedOrderData);
+      console.log("🔄 Updated order data type:", typeof updatedOrderData);
+      console.log("🔄 Updated order data keys:", Object.keys(updatedOrderData || {}));
 
       const updatedOrder = transformApiOrder(updatedOrderData);
+      console.log("🔄 Transformed updated order:", updatedOrder);
 
       // Update the specific order in the list
       setOrders((prevOrders) => {
+        console.log("🔄 Previous orders count:", prevOrders.length);
+        const orderToUpdate = prevOrders.find(order => order.id === updatedOrder.id);
+        console.log("🔄 Order to update found:", !!orderToUpdate);
+        
         const updatedOrders = prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
         );
-        return sortOrders(updatedOrders, sortBy);
+        console.log("🔄 Updated orders count:", updatedOrders.length);
+        
+        const sortedOrders = sortOrders(updatedOrders, sortBy);
+        console.log("🔄 Sorted orders count:", sortedOrders.length);
+        return sortedOrders;
       });
     });
 
@@ -430,25 +562,33 @@ const StaffDashboard = () => {
             </div>
             <div className="flex items-center space-x-6">
               <Button
-                onClick={fetchOrders}
+                onClick={async () => {
+                  setLoading(true);
+                  await fetchOrders();
+                }}
                 variant="outline"
                 size="sm"
                 className="border-slate-300 text-slate-700 hover:bg-slate-50"
+                disabled={loading}
               >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-                Refresh
+                {loading ? (
+                  <Spinner size="sm" className="mr-2" />
+                ) : (
+                  <svg
+                    className="w-4 h-4 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                )}
+                {loading ? "Refreshing..." : "Refresh"}
               </Button>
               <Badge
                 variant="secondary"

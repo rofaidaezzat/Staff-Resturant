@@ -6,6 +6,7 @@ import { axiosInstance } from "../config/axios.config";
 import Pusher from "pusher-js";
 import Pagination from "../Components/Pagination";
 import Loading from "../Components/Loading";
+import Spinner from "../Components/Spinner";
 
 // =================== Pusher Configuration ===================
 const PUSHER_KEY = "4b8ce5bea9c546484b04";
@@ -66,7 +67,7 @@ const StaffDashboard = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pusherConnected, setPusherConnected] = useState<boolean>(false);
-
+  const [isUpdating, setIsUpdating] = useState<boolean>(false);
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [ordersPerPage] = useState<number>(10); // Number of orders per page
@@ -273,14 +274,13 @@ const StaffDashboard = () => {
     newStatus: ComponentStatus
   ): Promise<void> => {
     try {
-      // Update in backend
+      setIsUpdating((prev) => ({ ...prev, [orderId]: true })); // Update specific order's loading state
       await axiosInstance.post("webhook/update-order", {
         orderId: orderId,
         status: mapComponentStatusToApiStatus(newStatus),
         updatedAt: new Date().toISOString(),
       });
 
-      // Update local state
       const updatedOrders = orders.map((order) =>
         order.id === orderId
           ? {
@@ -291,12 +291,13 @@ const StaffDashboard = () => {
           : order
       );
 
-      // Apply current sorting to updated orders
       const sortedOrders = sortOrders(updatedOrders, sortBy);
       setOrders(sortedOrders);
     } catch (err) {
       console.error("Error updating order status:", err);
       setError("Failed to update order status. Please try again.");
+    } finally {
+      setIsUpdating((prev) => ({ ...prev, [orderId]: false })); // Reset specific order's loading state
     }
   };
 
@@ -1180,20 +1181,17 @@ const StaffDashboard = () => {
                                     }
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    <svg
-                                      className="w-5 h-5 mr-2"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                      />
-                                    </svg>
-                                    Start Preparing
+                                    {isUpdating[order.id] ? (
+                                      <>
+                                        <Spinner
+                                          size="sm"
+                                          className="text-white mr-2"
+                                        />
+                                        Updating...
+                                      </>
+                                    ) : (
+                                      "Start Preparing"
+                                    )}
                                   </Button>
                                 )}
                                 {order.status === "in-progress" && (
@@ -1204,20 +1202,17 @@ const StaffDashboard = () => {
                                     }
                                     className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    <svg
-                                      className="w-5 h-5 mr-2"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M5 13l4 4L19 7"
-                                      />
-                                    </svg>
-                                    Mark Ready
+                                    {isUpdating[order.id] ? (
+                                      <>
+                                        <Spinner
+                                          size="sm"
+                                          className="text-white mr-2"
+                                        />
+                                        Updating...
+                                      </>
+                                    ) : (
+                                      "Mark Ready"
+                                    )}
                                   </Button>
                                 )}
                                 {order.status === "ready" && (
@@ -1229,20 +1224,17 @@ const StaffDashboard = () => {
                                     variant="outline"
                                     className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    <svg
-                                      className="w-5 h-5 mr-2"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                      />
-                                    </svg>
-                                    Complete
+                                    {isUpdating[order.id] ? (
+                                      <>
+                                        <Spinner
+                                          size="sm"
+                                          className="text-white mr-2"
+                                        />
+                                        Updating...
+                                      </>
+                                    ) : (
+                                      "Complete"
+                                    )}
                                   </Button>
                                 )}
                               </>

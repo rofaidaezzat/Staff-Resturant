@@ -75,7 +75,7 @@ const StaffDashboard = () => {
   // Enhanced function to safely parse items
   const parseOrderItems = (itemsString: string): string[] => {
     console.log("🔍 Parsing items:", itemsString);
-    
+
     if (!itemsString?.trim()) {
       console.log("🔍 Items string is empty or null");
       return [];
@@ -142,13 +142,23 @@ const StaffDashboard = () => {
   // Transform API order to component order format
   const transformApiOrder = (apiOrder: any): Order => {
     console.log("🔍 Transforming API order:", apiOrder);
-    
+
     const transformedOrder = {
       // تأكد من استخدام order_ID أولاً، ثم orderId كبديل
-      id: apiOrder.order_ID || apiOrder.orderId || apiOrder.order_id || apiOrder.id,
+      id: (
+        apiOrder.order_ID ||
+        apiOrder.orderId ||
+        apiOrder.order_id ||
+        apiOrder.id ||
+        `order_${Date.now()}`
+      ).toString(),
       customerName:
         apiOrder.customerName || apiOrder.Customer_Name || "Unknown Customer",
-      orderType: apiOrder.orderType || apiOrder.order_Type || apiOrder.order_type || "dine-in",
+      orderType:
+        apiOrder.orderType ||
+        apiOrder.order_Type ||
+        apiOrder.order_type ||
+        "dine-in",
       items: parseOrderItems(apiOrder.items || "[]"),
       status: mapApiStatusToComponentStatus(apiOrder.status || "Received"),
       timestamp: (() => {
@@ -157,18 +167,31 @@ const StaffDashboard = () => {
           // Parse Arabic date format: "17-08-2025 01:19 AM"
           try {
             // Extract date parts
-            const match = dateString.match(/(\d+)-(\d+)-(\d+)\s+(\d+):(\d+)\s+(AM|PM)/);
+            const match = dateString.match(
+              /(\d+)-(\d+)-(\d+)\s+(\d+):(\d+)\s+(AM|PM)/
+            );
             if (match) {
               const [, day, month, year, hour, minute, period] = match;
               let hour24 = parseInt(hour);
-              
+
               // Convert to 24-hour format
-              if (period === 'PM' && hour24 !== 12) hour24 += 12;
-              if (period === 'AM' && hour24 === 12) hour24 = 0;
-              
+              if (period === "PM" && hour24 !== 12) hour24 += 12;
+              if (period === "AM" && hour24 === 12) hour24 = 0;
+
               // Create Date object (month is 0-indexed)
-              const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), hour24, parseInt(minute));
-              console.log("🔍 Parsed date:", dateString, "->", date.toISOString());
+              const date = new Date(
+                parseInt(year),
+                parseInt(month) - 1,
+                parseInt(day),
+                hour24,
+                parseInt(minute)
+              );
+              console.log(
+                "🔍 Parsed date:",
+                dateString,
+                "->",
+                date.toISOString()
+              );
               return date.toISOString();
             }
           } catch (err) {
@@ -187,9 +210,9 @@ const StaffDashboard = () => {
         apiOrder.updated_at ||
         apiOrder.createdAt ||
         apiOrder.created_at,
-      rowNumber: apiOrder.row_number || 0,
+      rowNumber: apiOrder.row_number,
     };
-    
+
     console.log("✅ Transformed order:", transformedOrder);
     return transformedOrder;
   };
@@ -197,32 +220,43 @@ const StaffDashboard = () => {
   // Sort orders function
   const sortOrders = (orders: Order[], sortOption: SortOption): Order[] => {
     console.log("🔄 Sorting orders by:", sortOption);
-    console.log("🔄 Orders before sorting:", orders.map(o => ({ id: o.id, timestamp: o.timestamp, status: o.status })));
-    
+    console.log(
+      "🔄 Orders before sorting:",
+      orders.map((o) => ({
+        id: o.id,
+        timestamp: o.timestamp,
+        status: o.status,
+      }))
+    );
+
     const sortedOrders = [...orders];
 
     switch (sortOption) {
       case "newest": {
-        const result = sortedOrders.sort(
-          (a, b) => {
-            const timeA = new Date(a.timestamp).getTime();
-            const timeB = new Date(b.timestamp).getTime();
-            console.log(`🔄 Comparing: ${a.id} (${a.timestamp} -> ${timeA}) vs ${b.id} (${b.timestamp} -> ${timeB})`);
-            return timeB - timeA;
-          }
+        const result = sortedOrders.sort((a, b) => {
+          const timeA = new Date(a.timestamp).getTime();
+          const timeB = new Date(b.timestamp).getTime();
+          console.log(
+            `🔄 Comparing: ${a.id} (${a.timestamp} -> ${timeA}) vs ${b.id} (${b.timestamp} -> ${timeB})`
+          );
+          return timeB - timeA;
+        });
+        console.log(
+          "🔄 Orders after newest sorting:",
+          result.map((o) => ({ id: o.id, timestamp: o.timestamp }))
         );
-        console.log("🔄 Orders after newest sorting:", result.map(o => ({ id: o.id, timestamp: o.timestamp })));
         return result;
       }
       case "oldest": {
-        const result = sortedOrders.sort(
-          (a, b) => {
-            const timeA = new Date(a.timestamp).getTime();
-            const timeB = new Date(b.timestamp).getTime();
-            return timeA - timeB;
-          }
+        const result = sortedOrders.sort((a, b) => {
+          const timeA = new Date(a.timestamp).getTime();
+          const timeB = new Date(b.timestamp).getTime();
+          return timeA - timeB;
+        });
+        console.log(
+          "🔄 Orders after oldest sorting:",
+          result.map((o) => ({ id: o.id, timestamp: o.timestamp }))
         );
-        console.log("🔄 Orders after oldest sorting:", result.map(o => ({ id: o.id, timestamp: o.timestamp })));
         return result;
       }
       case "status": {
@@ -236,18 +270,32 @@ const StaffDashboard = () => {
         const result = sortedOrders.sort(
           (a, b) => statusOrder[a.status] - statusOrder[b.status]
         );
-        console.log("🔄 Orders after status sorting:", result.map(o => ({ id: o.id, status: o.status })));
+        console.log(
+          "🔄 Orders after status sorting:",
+          result.map((o) => ({ id: o.id, status: o.status }))
+        );
         return result;
       }
       case "total": {
         const result = sortedOrders.sort((a, b) => b.total - a.total);
-        console.log("🔄 Orders after total sorting:", result.map(o => ({ id: o.id, total: o.total })));
+        console.log(
+          "🔄 Orders after total sorting:",
+          result.map((o) => ({ id: o.id, total: o.total }))
+        );
         return result;
       }
       default: {
         return sortedOrders;
       }
     }
+  };
+
+  // Function to assign row numbers to orders
+  const assignRowNumbers = (orders: Order[]): Order[] => {
+    return orders.map((order, index) => ({
+      ...order,
+      rowNumber: index + 1,
+    }));
   };
 
   // Pagination calculations
@@ -290,7 +338,7 @@ const StaffDashboard = () => {
         setError("Invalid response from server. Please try again.");
         return;
       }
-      
+
       console.log("📊 Raw API response data:", response.data);
       console.log("📊 Response data length:", response.data.length);
 
@@ -303,22 +351,22 @@ const StaffDashboard = () => {
       const sortedOrders = sortOrders(transformedOrders, sortBy);
       console.log("📊 Sorted orders:", sortedOrders);
       console.log("📊 Number of sorted orders:", sortedOrders.length);
-      
+
       // Check for any orders with undefined or null IDs
-      const invalidOrders = sortedOrders.filter(order => !order.id);
+      const invalidOrders = sortedOrders.filter((order) => !order.id);
       if (invalidOrders.length > 0) {
         console.error("❌ Found orders with invalid IDs:", invalidOrders);
       }
-      
-      setOrders(sortedOrders);
+
+      setOrders(assignRowNumbers(sortedOrders));
       setError(null);
-      
+
       console.log(`✅ Successfully loaded ${sortedOrders.length} orders`);
       console.log("📝 Current orders state:", sortedOrders);
     } catch (err) {
       console.error("Error fetching orders:", err);
       setError("Failed to fetch orders. Please try again.");
-      
+
       // Keep existing orders if available
       if (orders.length > 0) {
         console.log("Keeping existing orders due to fetch error");
@@ -334,7 +382,7 @@ const StaffDashboard = () => {
   const handleSortChange = (newSortOption: SortOption) => {
     setSortBy(newSortOption);
     const sortedOrders = sortOrders(orders, newSortOption);
-    setOrders(sortedOrders);
+    setOrders(assignRowNumbers(sortedOrders));
     setCurrentPage(1); // Reset to first page when sorting
   };
 
@@ -375,26 +423,43 @@ const StaffDashboard = () => {
     orderId: string,
     newStatus: ComponentStatus
   ): Promise<void> => {
+    if (!orderId) {
+      console.error("❌ Cannot update order: orderId is missing");
+      return;
+    }
+
     try {
       setIsUpdating((prev) => ({ ...prev, [orderId]: true }));
-      
+
       // Send update request to API
       const response = await axiosInstance.post("webhook/update-order", {
         orderId: orderId,
         status: mapComponentStatusToApiStatus(newStatus),
         updatedAt: new Date().toISOString(),
       });
+      // get response data
+      // Send update request to API
+      const response2 = await axiosInstance.get(
+        `webhook/get-status?orderId=${orderId}`,
+        {
+          orderId: orderId,
+          status: mapComponentStatusToApiStatus(newStatus),
+          updatedAt: new Date().toISOString(),
+        }
+      );
 
       console.log("Order status update response:", response.data);
 
       // Check if update was successful
       if (response.status === 200 || response.status === 201) {
-        console.log(`✅ Order ${orderId} status updated to ${newStatus} successfully`);
+        console.log(
+          `✅ Order ${orderId} status updated to ${newStatus} successfully`
+        );
         console.log("🔄 Refreshing orders from API...");
-        
+
         // Refresh orders from API to ensure consistency
         await fetchOrders();
-        
+
         console.log("✅ Orders refreshed successfully after status update");
       } else {
         throw new Error(`API returned status ${response.status}`);
@@ -402,12 +467,15 @@ const StaffDashboard = () => {
     } catch (err) {
       console.error("Error updating order status:", err);
       setError("Failed to update order status. Please try again.");
-      
+
       // Optionally refresh orders to ensure UI is in sync with database
       try {
         await fetchOrders();
       } catch (refreshErr) {
-        console.error("Error refreshing orders after failed update:", refreshErr);
+        console.error(
+          "Error refreshing orders after failed update:",
+          refreshErr
+        );
       }
     } finally {
       setIsUpdating((prev) => ({ ...prev, [orderId]: false }));
@@ -450,11 +518,11 @@ const StaffDashboard = () => {
         console.log("🚨 Previous orders count:", prevOrders.length);
         const updatedOrders = [newOrder, ...prevOrders];
         console.log("🚨 Updated orders count:", updatedOrders.length);
-        
+
         // Apply current sorting
         const sortedOrders = sortOrders(updatedOrders, sortBy);
         console.log("🚨 Sorted orders count:", sortedOrders.length);
-        return sortedOrders;
+        return assignRowNumbers(sortedOrders);
       });
 
       // Optional: Show a notification or play a sound
@@ -467,7 +535,10 @@ const StaffDashboard = () => {
     channel.bind(UPDATE_EVENT_NAME, (updatedOrderData: any) => {
       console.log("🔄 React: Order updated!", updatedOrderData);
       console.log("🔄 Updated order data type:", typeof updatedOrderData);
-      console.log("🔄 Updated order data keys:", Object.keys(updatedOrderData || {}));
+      console.log(
+        "🔄 Updated order data keys:",
+        Object.keys(updatedOrderData || {})
+      );
 
       const updatedOrder = transformApiOrder(updatedOrderData);
       console.log("🔄 Transformed updated order:", updatedOrder);
@@ -475,17 +546,19 @@ const StaffDashboard = () => {
       // Update the specific order in the list
       setOrders((prevOrders) => {
         console.log("🔄 Previous orders count:", prevOrders.length);
-        const orderToUpdate = prevOrders.find(order => order.id === updatedOrder.id);
+        const orderToUpdate = prevOrders.find(
+          (order) => order.id === updatedOrder.id
+        );
         console.log("🔄 Order to update found:", !!orderToUpdate);
-        
+
         const updatedOrders = prevOrders.map((order) =>
           order.id === updatedOrder.id ? updatedOrder : order
         );
         console.log("🔄 Updated orders count:", updatedOrders.length);
-        
+
         const sortedOrders = sortOrders(updatedOrders, sortBy);
         console.log("🔄 Sorted orders count:", sortedOrders.length);
-        return sortedOrders;
+        return assignRowNumbers(sortedOrders);
       });
     });
 
@@ -946,7 +1019,7 @@ const StaffDashboard = () => {
                                       : "text-orange-700"
                                   }`}
                                 >
-                                  #{order.rowNumber || order.id.split("-")[1]}
+                                  Row {order.rowNumber}
                                 </span>
 
                                 {/* Big X overlay for canceled orders */}
@@ -990,6 +1063,11 @@ const StaffDashboard = () => {
                                 >
                                   {order.customerName || "Walk-in Customer"}
                                 </h3>
+
+                                {/* Row Number Badge */}
+                                <Badge className="bg-orange-100 text-orange-700 border-orange-300 text-xs font-bold px-2 py-1">
+                                  Row {order.rowNumber}
+                                </Badge>
 
                                 {/* Large Canceled Badge */}
                                 {order.status === "canceled" && (
@@ -1317,11 +1395,18 @@ const StaffDashboard = () => {
                                   <Button
                                     size="sm"
                                     onClick={() =>
-                                      updateOrderStatus(order.id, "in-progress")
+                                      order.id
+                                        ? updateOrderStatus(
+                                            order.id,
+                                            "in-progress"
+                                          )
+                                        : console.error(
+                                            "❌ Cannot update order: order.id is missing"
+                                          )
                                     }
                                     className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    {isUpdating[order.id] ? (
+                                    {order.id && isUpdating[order.id] ? (
                                       <>
                                         <Spinner
                                           size="sm"
@@ -1338,11 +1423,15 @@ const StaffDashboard = () => {
                                   <Button
                                     size="sm"
                                     onClick={() =>
-                                      updateOrderStatus(order.id, "ready")
+                                      order.id
+                                        ? updateOrderStatus(order.id, "ready")
+                                        : console.error(
+                                            "❌ Cannot update order: order.id is missing"
+                                          )
                                     }
                                     className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    {isUpdating[order.id] ? (
+                                    {order.id && isUpdating[order.id] ? (
                                       <>
                                         <Spinner
                                           size="sm"
@@ -1359,12 +1448,19 @@ const StaffDashboard = () => {
                                   <Button
                                     size="sm"
                                     onClick={() =>
-                                      updateOrderStatus(order.id, "completed")
+                                      order.id
+                                        ? updateOrderStatus(
+                                            order.id,
+                                            "completed"
+                                          )
+                                        : console.error(
+                                            "❌ Cannot update order: order.id is missing"
+                                          )
                                     }
                                     variant="outline"
                                     className="border-2 border-slate-300 text-slate-700 hover:bg-slate-50 font-bold px-8 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
                                   >
-                                    {isUpdating[order.id] ? (
+                                    {order.id && isUpdating[order.id] ? (
                                       <>
                                         <Spinner
                                           size="sm"

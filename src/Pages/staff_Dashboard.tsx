@@ -437,16 +437,6 @@ const StaffDashboard = () => {
         status: mapComponentStatusToApiStatus(newStatus),
         updatedAt: new Date().toISOString(),
       });
-      // get response data
-      // Send update request to API
-      const response2 = await axiosInstance.get(
-        `webhook/get-status?orderId=${orderId}`,
-        {
-          orderId: orderId,
-          status: mapComponentStatusToApiStatus(newStatus),
-          updatedAt: new Date().toISOString(),
-        }
-      );
 
       console.log("Order status update response:", response.data);
 
